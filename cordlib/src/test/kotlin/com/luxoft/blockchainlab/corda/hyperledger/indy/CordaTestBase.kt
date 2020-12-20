@@ -32,6 +32,7 @@ import net.corda.testing.node.internal.MockNodeArgs
 import net.corda.testing.node.internal.newContext
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import java.lang.RuntimeException
 import java.time.Duration
 import java.util.*
@@ -43,6 +44,7 @@ import kotlin.math.absoluteValue
  *
  * Note: [projectReciverFlows] must be kept updated!
  * */
+@Ignore
 open class CordaTestBase {
 
     protected lateinit var trustee: StartedNode<MockNode>
@@ -210,7 +212,7 @@ open class CordaTestBase {
                 val valueInt = value.toInt()
                 val greaterThan = rng.nextInt().absoluteValue % valueInt
 
-                proveGreaterThan(key, greaterThan) {
+                provePredicateThan(key, PredicateTypes.GT, greaterThan) {
                     FilterProperty.values().forEach filterLoop@ {
                         val skip = rng.nextBoolean()
                         if (skip) return@filterLoop

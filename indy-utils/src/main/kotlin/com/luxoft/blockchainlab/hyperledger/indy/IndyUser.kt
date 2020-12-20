@@ -4,7 +4,10 @@ import com.luxoft.blockchainlab.hyperledger.indy.ledger.LedgerUser
 import com.luxoft.blockchainlab.hyperledger.indy.models.*
 import com.luxoft.blockchainlab.hyperledger.indy.utils.ExtraQueryBuilder
 import com.luxoft.blockchainlab.hyperledger.indy.utils.SerializationUtils
+import com.luxoft.blockchainlab.hyperledger.indy.wallet.IndySDKWalletUser
 import com.luxoft.blockchainlab.hyperledger.indy.wallet.WalletUser
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 
 
 /**
@@ -45,6 +48,32 @@ class IndyUser(
         return credentialDefinition
     }
 
+    /**
+     * Returns revocation registry info ([RevocationRegistryInfo]) for credential definition if there's one on ledger.
+     * Otherwise returns null
+     *
+     * @param credentialDefinitionId    credential definition id
+     *
+     * @return                          created
+     */
+    override fun getRevocationRegistryDefinition(
+            credentialDefinitionId: CredentialDefinitionId
+    ): RevocationRegistryDefinition? {
+
+        val revRegId = credentialDefinitionId.getPossibleRevocationRegistryDefinitionId(IndySDKWalletUser.REVOCATION_TAG)
+        return ledgerUser.retrieveRevocationRegistryDefinition(revRegId)
+    }
+
+    /**
+     * Creates revocation registry for credential definition if there's no one in ledger
+     * (usable only for those credential definition for which enableRevocation = true)
+     *
+     * @param credentialDefinitionId    credential definition id
+     * @param maxCredentialNumber       maximum number of credentials which can be issued for this credential definition
+     *                                  (example) driver agency can produce only 1000 driver licences per year
+     *
+     * @return                          created
+     */
     override fun createRevocationRegistryAndStoreOnLedger(
         credentialDefinitionId: CredentialDefinitionId,
         maxCredentialNumber: Int
@@ -168,15 +197,19 @@ class IndyUser(
             provideCredentialDefinition = { ledgerUser.retrieveCredentialDefinition(it)!! },
             masterSecretId = masterSecretId,
             extraQuery = extraQuery
-        ) { revRegId, credRevId, interval ->
+        ) { revRegId, credRevId, interval, revRegDuplicate ->
+            val atLeastOneSecondDelay =
+                if (revRegDuplicate) CompletableFuture.runAsync { TimeUnit.SECONDS.sleep(1L) }
+                else CompletableFuture.completedFuture(Unit)
             val revocationRegistryDefinition = ledgerUser.retrieveRevocationRegistryDefinition(revRegId)
                 ?: throw IndyRevRegNotFoundException(revRegId, "Get revocation state has been failed")
 
-            val response = ledgerUser.retrieveRevocationRegistryDelta(revRegId, Interval(null, interval.to))
+            val response = ledgerUser.retrieveRevocationRegistryDelta(revRegId, interval)
                 ?: throw IndyRevDeltaNotFoundException(revRegId, "Interval is $interval")
-            val (timestamp, revRegDelta) = response
+            val (_, revRegDelta) = response
 
-            walletUser.createRevocationState(revocationRegistryDefinition, revRegDelta, credRevId, timestamp)
+            atLeastOneSecondDelay.get()
+            walletUser.createRevocationState(revocationRegistryDefinition, revRegDelta, credRevId, Timestamp.now())
         }
     }
 

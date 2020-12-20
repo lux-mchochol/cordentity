@@ -4,9 +4,10 @@ import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.CreateCredentialDefi
 import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.CreateSchemaFlow
 import com.luxoft.blockchainlab.corda.hyperledger.indy.flow.b2b.*
 import com.luxoft.blockchainlab.hyperledger.indy.models.CredentialValue
+import com.luxoft.blockchainlab.hyperledger.indy.models.PredicateTypes
 import com.luxoft.blockchainlab.hyperledger.indy.utils.WalletUtils
 import com.luxoft.blockchainlab.hyperledger.indy.utils.proofRequest
-import com.luxoft.blockchainlab.hyperledger.indy.utils.proveGreaterThan
+import com.luxoft.blockchainlab.hyperledger.indy.utils.provePredicateThan
 import net.corda.core.identity.CordaX500Name
 import net.corda.node.internal.StartedNode
 import net.corda.testing.node.internal.InternalMockNetwork
@@ -87,7 +88,7 @@ class ReadmeExampleTest : CordaTestBase() {
 
         // Use special proof request DSL
         val proofRequest = proofRequest("legal age proof", "1.0") {
-            proveGreaterThan("BORN", eighteenYearsAgo)
+            provePredicateThan("BORN", PredicateTypes.GT, eighteenYearsAgo)
         }
 
         val verified = store.services.startFlow(

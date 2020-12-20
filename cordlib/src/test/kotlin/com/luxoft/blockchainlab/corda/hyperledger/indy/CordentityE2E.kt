@@ -11,6 +11,7 @@ import org.junit.Test
  *
  * Ignored tests are not-fixed bugs
  */
+@Ignore
 class CordentityE2E : CordaTestBase() {
 
     @Test
